@@ -32,7 +32,7 @@ interface SensorLog {
 }
 
 interface ChartRow {
-  time: string; // ISO key by bucket
+  time: number; // local timestamp (ms) for bucket start
   floor1?: number | null;
   floor2?: number | null;
   floor3?: number | null;
@@ -50,13 +50,18 @@ function CustomTooltip({ active, payload, label }: {
     name?: string;
     value?: number;
   }>;
-  label?: string;
+  label?: string | number;
 }) {
   if (!active || !payload || payload.length === 0) return null;
 
   return (
     <div className="card p-3 shadow-lg">
-      <p className="font-medium text-neutral-900 mb-2">{label ?? ''}</p>
+      <p className="font-medium text-neutral-900 mb-2">
+        {(() => {
+          const v = typeof label === 'number' ? new Date(label) : new Date(String(label));
+          return v.toLocaleString();
+        })()}
+      </p>
       {payload.map((entry, index) => (
         <div key={index} className="flex items-center gap-2 text-sm">
           <div 
@@ -162,32 +167,32 @@ export default function ResultChart({
     return 'day';                        // 6M/1Y ต้องการ stamp รายวันอย่างละเอียด
   }
 
-  function bucketDateUTC(d: Date, bucket: 'hour' | 'day' | 'week' | 'month'): Date {
-    const y = d.getUTCFullYear();
-    const m = d.getUTCMonth();
-    const day = d.getUTCDate();
-    if (bucket === 'hour') return new Date(Date.UTC(y, m, day, d.getUTCHours(), 0, 0, 0));
-    if (bucket === 'day') return new Date(Date.UTC(y, m, day, 0, 0, 0, 0));
+  function bucketDateLocal(d: Date, bucket: 'hour' | 'day' | 'week' | 'month'): Date {
+    const y = d.getFullYear();
+    const m = d.getMonth();
+    const day = d.getDate();
+    if (bucket === 'hour') return new Date(y, m, day, d.getHours(), 0, 0, 0);
+    if (bucket === 'day') return new Date(y, m, day, 0, 0, 0, 0);
     if (bucket === 'week') {
-      // ทำให้สัปดาห์เริ่มวันจันทร์ (ISO): 1=Mon..7=Sun
-      const tmp = new Date(Date.UTC(y, m, day, 0, 0, 0, 0));
-      const dow = (tmp.getUTCDay() + 6) % 7; // 0=Mon
-      tmp.setUTCDate(tmp.getUTCDate() - dow);
+      // สัปดาห์เริ่มวันจันทร์ตามเวลาท้องถิ่น
+      const tmp = new Date(y, m, day, 0, 0, 0, 0);
+      const dow = (tmp.getDay() + 6) % 7; // 0=Mon
+      tmp.setDate(tmp.getDate() - dow);
       return tmp;
     }
     // month
-    return new Date(Date.UTC(y, m, 1, 0, 0, 0, 0));
+    return new Date(y, m, 1, 0, 0, 0, 0);
   }
 
   // แปลงข้อมูลและจัดกลุ่มตามคาบเวลา (bucket)
   const chartData = useMemo(() => {
     if (data.length === 0) return [];
     const bucket = getBucketByRange(rangeHours);
-    const grouped: Record<string, { f1: number[]; f2: number[]; f3: number[] }> = {};
+    const grouped: Record<number, { f1: number[]; f2: number[]; f3: number[] }> = {};
     
     for (const log of data) {
       const t = new Date(log.created_at);
-      const key = bucketDateUTC(t, bucket).toISOString();
+      const key = bucketDateLocal(t, bucket).getTime();
       if (!grouped[key]) grouped[key] = { f1: [], f2: [], f3: [] };
       const v = log[sensorKey];
       if (typeof v === 'number') {
@@ -199,7 +204,7 @@ export default function ResultChart({
     const rows: ChartRow[] = Object.entries(grouped).map(([key, vals]) => {
       const avg = (arr: number[]) => (arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null);
       return {
-        time: key,
+        time: Number(key),
         floor1: avg(vals.f1),
         floor2: avg(vals.f2),
         floor3: avg(vals.f3),
@@ -211,14 +216,14 @@ export default function ResultChart({
       const end = new Date();
       const stepMs = bucket === 'hour' ? 3600e3 : bucket === 'day' ? 86400e3 : bucket === 'week' ? 7*86400e3 : 30*86400e3;
       const scaffolds: ChartRow[] = [];
-      for (let t = bucketDateUTC(start, bucket).getTime(); t <= end.getTime(); t += stepMs) {
-        scaffolds.push({ time: new Date(t).toISOString(), floor1: null, floor2: null, floor3: null });
+      for (let t = bucketDateLocal(start, bucket).getTime(); t <= end.getTime(); t += stepMs) {
+        scaffolds.push({ time: t, floor1: null, floor2: null, floor3: null });
       }
       // รวม scaffold กับ rows จริง
-      const byKey = new Map<string, ChartRow>(rows.map(r => [r.time, r] as const));
+      const byKey = new Map<number, ChartRow>(rows.map(r => [r.time, r] as const));
       return scaffolds.map(s => byKey.get(s.time) ?? s);
     }
-    return rows.sort((a, b) => a.time.localeCompare(b.time));
+    return rows.sort((a, b) => a.time - b.time);
   }, [data, sensorKey, rangeHours]);
 
   // สถิติ min/avg/max ต่อ floor สำหรับ Single view
@@ -375,8 +380,8 @@ export default function ResultChart({
 
           {(() => {
             const bucket = getBucketByRange(rangeHours);
-            const tickFormatter = (iso: string) => {
-              const d = new Date(iso);
+            const tickFormatter = (value: number) => {
+              const d = new Date(value);
               if (bucket === 'hour') {
                 return d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false });
               }
@@ -391,6 +396,8 @@ export default function ResultChart({
             return (
               <XAxis
                 dataKey="time"
+                type="number"
+                domain={[ 'auto', 'auto' ]}
                 tickFormatter={tickFormatter}
                 fontSize={font}
                 tick={{ fill: '#6b7280', fontWeight: 500 }}
@@ -414,9 +421,9 @@ export default function ResultChart({
           <Tooltip
             content={<CustomTooltip />} 
             cursor={{ fill: '#f3f4f6', opacity: 0.5 }}
-            labelFormatter={(iso: string) => {
+            labelFormatter={(value: number | string) => {
               const bucket = getBucketByRange(rangeHours);
-              const d = new Date(iso);
+              const d = new Date(typeof value === 'number' ? value : String(value));
               const timeStr = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false });
               const dateStr = d.toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' });
               // ให้ tooltip header เป็น date/time ทั้งหมด

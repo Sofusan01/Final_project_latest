@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useMemo } from "react";
+import { supabase } from "@/lib/supabase";
 import ResultChart from "@/components/ResultChart";
 import {
   Thermometer,
@@ -46,6 +47,8 @@ export default function ResultPage() {
   const [sensor, setSensor] = useState<SensorKey>("ph");
   const [rangeHours, setRangeHours] = useState<number>(24);
   const [isLoading, setIsLoading] = useState(true);
+  const [fromDate, setFromDate] = useState<string>("");
+  const [toDate, setToDate] = useState<string>("");
 
   useEffect(() => {
     // Prevent flicker on mount
@@ -140,6 +143,69 @@ export default function ResultPage() {
                   </button>
                 );
               })}
+            </div>
+
+            {/* Date Range + Export */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              <input
+                type="date"
+                value={fromDate}
+                onChange={(e) => setFromDate(e.target.value)}
+                className="px-3 py-2 rounded-lg border border-neutral-300 bg-white text-sm"
+                aria-label="From date"
+              />
+              <span className="text-neutral-500 text-sm text-center">to</span>
+              <input
+                type="date"
+                value={toDate}
+                onChange={(e) => setToDate(e.target.value)}
+                className="px-3 py-2 rounded-lg border border-neutral-300 bg-white text-sm"
+                aria-label="To date"
+              />
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!fromDate || !toDate) {
+                    alert("กรุณาเลือกวันที่เริ่มและสิ้นสุด");
+                    return;
+                  }
+                  const fromIso = new Date(fromDate + "T00:00:00").toISOString();
+                  const toIso = new Date(toDate + "T23:59:59").toISOString();
+                  const { data, error } = await supabase
+                    .from("sensor_logs")
+                    .select("floor,temp,humid,wt,ph,ec,lux,created_at")
+                    .gte("created_at", fromIso)
+                    .lte("created_at", toIso)
+                    .in("floor", [1,2,3])
+                    .order("created_at", { ascending: true });
+                  if (error) {
+                    alert(`Export failed: ${error.message}`);
+                    return;
+                  }
+                  const rows = data || [];
+                  const header = ["floor","temp","humid","wt","ph","ec","lux","created_at"]; 
+                  const esc = (v: unknown) => {
+                    if (v === null || v === undefined) return "";
+                    const s = String(v);
+                    return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+                  };
+                  const csv = [header.join(",")]
+                    .concat(rows.map(r => [r.floor, r.temp ?? "", r.humid ?? "", r.wt ?? "", r.ph ?? "", r.ec ?? "", r.lux ?? "", r.created_at].map(esc).join(",")))
+                    .join("\n");
+                  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = `sensor_logs_${fromDate}_${toDate}.csv`;
+                  document.body.appendChild(a);
+                  a.click();
+                  a.remove();
+                  URL.revokeObjectURL(url);
+                }}
+                className="px-3 py-2 rounded-lg bg-neutral-900 text-white text-sm hover:bg-neutral-800"
+              >
+                Export CSV
+              </button>
             </div>
           </div>
 
