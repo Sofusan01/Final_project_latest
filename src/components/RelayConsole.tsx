@@ -196,8 +196,7 @@ export default function RelayConsole({
               <Settings className="w-6 h-6 text-neutral-300" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-white">Control Console</h2>
-              <p className="text-neutral-300 text-sm font-medium">{floor.toUpperCase()}</p>
+              <h2 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight">{floor.toUpperCase()}</h2>
             </div>
           </div>
           <div className="flex items-center gap-2 text-neutral-300">
@@ -279,8 +278,8 @@ export default function RelayConsole({
                   className={`
                     p-4 rounded-2xl border transition-all duration-300
                     ${isActive
-                      ? "border-green-300 bg-green-50"
-                      : "border-neutral-200 bg-white hover:bg-neutral-50"
+                      ? "border-green-400 bg-green-50"
+                      : "border-red-300 bg-red-50"
                     }
                   `}
                 >
@@ -303,11 +302,11 @@ export default function RelayConsole({
                       {/* Status */}
                       <div className="flex items-center gap-2">
                         {isActive ? (
-                          <CheckCircle className="w-5 h-5 text-green-600" />
+                          <CheckCircle className="w-5 h-5 text-green-700" />
                         ) : (
-                          <AlertCircle className="w-5 h-5 text-neutral-400" />
+                          <AlertCircle className="w-5 h-5 text-red-600" />
                         )}
-                        <span className="text-sm font-medium text-neutral-700">
+                        <span className={`text-sm font-semibold ${isActive ? "text-green-700" : "text-red-600"}`}>
                           {isActive ? "ON" : "OFF"}
                         </span>
                       </div>
@@ -504,14 +503,7 @@ export default function RelayConsole({
           </div>
         )}
 
-        {/* Footer */}
-        <div className="mt-6 pt-4 border-t border-neutral-200">
-          <div className="text-center text-sm text-neutral-500 font-medium">
-            {relayMode === "auto"
-              ? "ESP32 reads schedule and controls automatically"
-              : "Manual real-time control"}
-          </div>
-        </div>
+        {/* Footer removed per request */}
       </div>
     </div>
   );

@@ -17,7 +17,7 @@ import {
 
 const SENSORS = [
   { key: "ph", label: "pH", icon: FlaskConical },
-  { key: "ec", label: "EC", icon: Zap },
+  { key: "ec", label: "Nutrition", icon: Zap },
   { key: "temp", label: "Temperature", icon: Thermometer },
   { key: "humid", label: "Humidity", icon: Droplets },
   { key: "wt", label: "Water Temperature", icon: Waves },
@@ -76,8 +76,7 @@ export default function ResultPage() {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-50 p-4 md:p-6">
-      <div className="w-full max-w-7xl mx-auto space-y-6">
+    <div className="flex flex-col gap-8 animate-fade-in">
         {/* Page Header */}
         <div className="flex flex-col gap-3">
           <div className="flex items-start justify-between gap-3">
@@ -252,7 +251,6 @@ export default function ResultPage() {
         {viewMode === "list" && <ListView rangeHours={rangeHours} />}
 
         {/* compare mode removed */}
-      </div>
     </div>
   );
 }

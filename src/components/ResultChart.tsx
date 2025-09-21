@@ -10,13 +10,19 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
+// Unified floor colors across all sensors
+// Fills (base): Floor1 #77BEF0, Floor2 #FFCB61, Floor3 #EA5B6F
+const UNIFIED_FLOOR_COLORS = ["#77BEF0", "#FFCB61", "#EA5B6F"] as const;
+// Strokes (deeper for contrast): tuned to enhance separation
+const UNIFIED_FLOOR_STROKES = ["#2A6FA3", "#C18A00", "#C53A4B"] as const;
+
 const SENSOR_CONFIG: Record<string, { label: string, unit: string, colors: string[] }> = {
-  temp: { label: "Temperature", unit: "°C", colors: ["#ef4444", "#dc2626", "#b91c1c"] },
-  humid: { label: "Humidity", unit: "%", colors: ["#3b82f6", "#2563eb", "#1d4ed8"] },
-  wt: { label: "Water Temperature", unit: "°C", colors: ["#06b6d4", "#0891b2", "#0e7490"] },
-  ph: { label: "pH", unit: "", colors: ["#8b5cf6", "#7c3aed", "#6d28d9"] },
-  ec: { label: "EC", unit: "EC", colors: ["#10b981", "#059669", "#047857"] },
-  lux: { label: "Light", unit: "lux", colors: ["#f59e0b", "#d97706", "#b45309"] },
+  temp: { label: "Temperature", unit: "°C", colors: [...UNIFIED_FLOOR_COLORS] },
+  humid: { label: "Humidity", unit: "%", colors: [...UNIFIED_FLOOR_COLORS] },
+  wt: { label: "Water Temperature", unit: "°C", colors: [...UNIFIED_FLOOR_COLORS] },
+  ph: { label: "pH", unit: "", colors: [...UNIFIED_FLOOR_COLORS] },
+  ec: { label: "Nutrition", unit: "mS/cm", colors: [...UNIFIED_FLOOR_COLORS] },
+  lux: { label: "Light", unit: "lux", colors: [...UNIFIED_FLOOR_COLORS] },
 };
 
 interface SensorLog {
@@ -336,9 +342,7 @@ export default function ResultChart({
                 <span className="text-sm text-neutral-700">{label}</span>
               </div>
               <div className="text-xs text-neutral-600">
-                <span className="mr-3">Min: <b>{s.min === null ? "-" : s.min.toFixed(2)}</b></span>
-                <span className="mr-3">Avg: <b>{s.avg === null ? "-" : s.avg.toFixed(2)}</b></span>
-                <span>Max: <b>{s.max === null ? "-" : s.max.toFixed(2)}</b></span>
+                <span>Avg: <b>{s.avg === null ? "-" : s.avg.toFixed(2)}</b></span>
               </div>
             </div>
           );
@@ -357,16 +361,16 @@ export default function ResultChart({
         >
           <defs>
             <linearGradient id={`floor1Gradient-${sensorKey}`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor={config.colors[0]} stopOpacity={0.8}/>
-              <stop offset="95%" stopColor={config.colors[0]} stopOpacity={0.1}/>
+              <stop offset="5%" stopColor={config.colors[0]} stopOpacity={0.6}/>
+              <stop offset="95%" stopColor={config.colors[0]} stopOpacity={0.05}/>
             </linearGradient>
             <linearGradient id={`floor2Gradient-${sensorKey}`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor={config.colors[1]} stopOpacity={0.8}/>
-              <stop offset="95%" stopColor={config.colors[1]} stopOpacity={0.1}/>
+              <stop offset="5%" stopColor={config.colors[1]} stopOpacity={0.6}/>
+              <stop offset="95%" stopColor={config.colors[1]} stopOpacity={0.05}/>
             </linearGradient>
             <linearGradient id={`floor3Gradient-${sensorKey}`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor={config.colors[2]} stopOpacity={0.8}/>
-              <stop offset="95%" stopColor={config.colors[2]} stopOpacity={0.1}/>
+              <stop offset="5%" stopColor={config.colors[2]} stopOpacity={0.6}/>
+              <stop offset="95%" stopColor={config.colors[2]} stopOpacity={0.05}/>
             </linearGradient>
           </defs>
 
@@ -437,37 +441,37 @@ export default function ResultChart({
           <Area
             type="monotone"
             dataKey="floor1"
-            stroke={config.colors[0]}
-            strokeWidth={2}
+            stroke={UNIFIED_FLOOR_STROKES[0]}
+            strokeWidth={3}
             fill={`url(#floor1Gradient-${sensorKey})`}
             name="Floor 1"
             connectNulls={false}
-            dot={compact ? false : { fill: config.colors[0], strokeWidth: 2, r: 4 }}
-            activeDot={{ r: 6, fill: config.colors[0] }}
+            dot={compact ? false : { fill: UNIFIED_FLOOR_STROKES[0], strokeWidth: 2, r: 4 }}
+            activeDot={{ r: 6, fill: UNIFIED_FLOOR_STROKES[0] }}
           />
 
           <Area
             type="monotone"
             dataKey="floor2"
-            stroke={config.colors[1]}
-            strokeWidth={2}
+            stroke={UNIFIED_FLOOR_STROKES[1]}
+            strokeWidth={3}
             fill={`url(#floor2Gradient-${sensorKey})`}
             name="Floor 2"
             connectNulls={false}
-            dot={compact ? false : { fill: config.colors[1], strokeWidth: 2, r: 4 }}
-            activeDot={{ r: 6, fill: config.colors[1] }}
+            dot={compact ? false : { fill: UNIFIED_FLOOR_STROKES[1], strokeWidth: 2, r: 4 }}
+            activeDot={{ r: 6, fill: UNIFIED_FLOOR_STROKES[1] }}
           />
 
           <Area
             type="monotone"
             dataKey="floor3"
-            stroke={config.colors[2]}
-            strokeWidth={2}
+            stroke={UNIFIED_FLOOR_STROKES[2]}
+            strokeWidth={3}
             fill={`url(#floor3Gradient-${sensorKey})`}
             name="Floor 3"
             connectNulls={false}
-            dot={compact ? false : { fill: config.colors[2], strokeWidth: 2, r: 4 }}
-            activeDot={{ r: 6, fill: config.colors[2] }}
+            dot={compact ? false : { fill: UNIFIED_FLOOR_STROKES[2], strokeWidth: 2, r: 4 }}
+            activeDot={{ r: 6, fill: UNIFIED_FLOOR_STROKES[2] }}
           />
         </AreaChart>
       </ResponsiveContainer>

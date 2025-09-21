@@ -10,18 +10,16 @@ interface CustomGaugeProps {
   value: number;
   min: number;
   max: number;
-  optimal?: { min: number; max: number };
   color: string;
-  optimalColor: string;
   size?: number;
 }
 
-function CustomGauge({ value, min, max, optimal, color, optimalColor, size = 120 }: CustomGaugeProps) {
-  const isOptimal = optimal && value >= optimal.min && value <= optimal.max;
-  const gaugeColor = isOptimal ? optimalColor : color;
+function CustomGauge({ value, min, max, color, size = 120 }: CustomGaugeProps) {
+  const valueIsValid = typeof value === 'number' && !Number.isNaN(value);
+  const gaugeColor = color;
   
-  // Clamp value to min-max range
-  const clampedValue = Math.min(Math.max(value, min), max);
+  // Clamp value to min-max range; if invalid, treat as min
+  const clampedValue = valueIsValid ? Math.min(Math.max(value, min), max) : min;
   
   // Calculate percentage
   const percentage = (clampedValue - min) / (max - min);
@@ -44,41 +42,42 @@ function CustomGauge({ value, min, max, optimal, color, optimalColor, size = 120
       >
         <svg 
           className="absolute inset-0 w-full h-full"
-          viewBox="0 0 100 50"
+          viewBox="-8 -8 116 66"
         >
           {/* Background track (half circle) */}
           <path
             d="M 10 40 A 40 40 0 0 1 90 40"
             fill="none"
-            stroke="#e5e5e5"
-            strokeWidth="4"
+            stroke="#d4d4d4"
+            strokeWidth="10"
             strokeLinecap="round"
           />
           
-          {/* Optimal range indicator (if exists) */}
-          {optimal && (
-            <path
-              d="M 10 40 A 40 40 0 0 1 90 40"
-              fill="none"
-              stroke="#22c55e"
-              strokeWidth="6"
-              strokeLinecap="round"
-              strokeDasharray={`${((optimal.max - optimal.min) / (max - min)) * circumference} ${circumference}`}
-              strokeDashoffset={circumference - (((optimal.min - min) / (max - min)) * circumference)}
-              opacity="0.3"
-            />
-          )}
+          {/* Optimal range indicator removed per request (no green) */}
           
           {/* Value indicator (half circle) */}
+          {/* Halo to increase visibility */}
           <path
             d="M 10 40 A 40 40 0 0 1 90 40"
             fill="none"
             stroke={gaugeColor}
-            strokeWidth="4"
+            strokeWidth="18"
             strokeLinecap="round"
             strokeDasharray={strokeDasharray}
             strokeDashoffset={strokeDashoffset}
             className="transition-all duration-700 ease-out"
+            opacity={valueIsValid ? 0.45 : 0.3}
+          />
+          <path
+            d="M 10 40 A 40 40 0 0 1 90 40"
+            fill="none"
+            stroke={gaugeColor}
+            strokeWidth="10"
+            strokeLinecap="round"
+            strokeDasharray={strokeDasharray}
+            strokeDashoffset={strokeDashoffset}
+            className="transition-all duration-700 ease-out"
+            opacity={valueIsValid ? 1 : 0.5}
           />
         </svg>
         
@@ -93,9 +92,9 @@ function CustomGauge({ value, min, max, optimal, color, optimalColor, size = 120
         >
           <span 
             className="text-lg font-bold transition-all duration-300"
-            style={{ color: gaugeColor }}
+            style={{ color: gaugeColor, opacity: valueIsValid ? 1 : 0.5 }}
           >
-            {typeof value === 'number' ? (value % 1 === 0 ? value : value.toFixed(1)) : value}
+            {valueIsValid ? (value % 1 === 0 ? value : Number(value).toFixed(1)) : "-"}
           </span>
         </div>
       </div>
@@ -123,79 +122,72 @@ const SENSOR_CONFIG: Record<string, {
   max: number;
   optimal?: { min: number; max: number };
   gaugeColor: string;
-  gaugeOptimalColor: string;
 }> = {
   temp: {
     label: "Temperature",
     icon: Thermometer,
     unit: "°C",
-    color: "#ef4444",
-    colorClass: "text-red-500",
+    color: "#FCA5A5", // red-300 pastel
+    colorClass: "text-red-400",
     min: 0,
     max: 40,
     optimal: { min: 20, max: 30 },
-    gaugeColor: "#ef4444",
-    gaugeOptimalColor: "#22c55e"
+    gaugeColor: "#FCA5A5"
   },
   humid: {
     label: "Humidity",
     icon: Droplets,
     unit: "%",
-    color: "#3b82f6",
-    colorClass: "text-blue-500",
+    color: "#93C5FD", // blue-300 pastel
+    colorClass: "text-blue-400",
     min: 0,
     max: 100,
     optimal: { min: 40, max: 70 },
-    gaugeColor: "#3b82f6",
-    gaugeOptimalColor: "#22c55e"
+    gaugeColor: "#93C5FD"
   },
   wt: {
     label: "Water Temperature",
     icon: Waves,
     unit: "°C",
-    color: "#06b6d4",
-    colorClass: "text-cyan-500",
+    color: "#67E8F9", // cyan-300 pastel
+    colorClass: "text-cyan-400",
     min: 0,
     max: 40,
     optimal: { min: 18, max: 25 },
-    gaugeColor: "#06b6d4",
-    gaugeOptimalColor: "#22c55e"
+    gaugeColor: "#67E8F9"
   },
   ph: {
     label: "pH Level",
     icon: FlaskConical,
     unit: "",
-    color: "#8b5cf6",
-    colorClass: "text-purple-500",
+    color: "#C4B5FD", // purple-300 pastel
+    colorClass: "text-purple-400",
     min: 0,
     max: 14,
     optimal: { min: 5.5, max: 7.5 },
-    gaugeColor: "#8b5cf6",
-    gaugeOptimalColor: "#22c55e"
+    gaugeColor: "#C4B5FD"
   },
   lux: {
     label: "Light Intensity",
     icon: Sun,
     unit: "lux",
-    color: "#f59e0b",
-    colorClass: "text-amber-500",
+    color: "#FDE68A", // amber-300 pastel
+    colorClass: "text-amber-400",
     min: 0,
     max: 100000,
     optimal: { min: 10000, max: 50000 },
-    gaugeColor: "#f59e0b",
-    gaugeOptimalColor: "#22c55e"
+    gaugeColor: "#FDE68A"
   },
   ec: {
-    label: "Conductivity",
+    label: "Nutrition",
     icon: Zap,
     unit: "mS/cm",
-    color: "#10b981",
-    colorClass: "text-emerald-500",
+    color: "#6EE7B7", // emerald-300 pastel
+    colorClass: "text-emerald-400",
     min: 0,
     max: 3000,
     optimal: { min: 800, max: 2000 },
-    gaugeColor: "#10b981",
-    gaugeOptimalColor: "#22c55e"
+    gaugeColor: "#6EE7B7"
   },
 };
 
@@ -294,7 +286,14 @@ export function FloorSensorCard({ floor }: { floor: string }) {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {sensorEntries.map(([key, value]) => {
+            {sensorEntries
+              .sort((a, b) => {
+                const order = ["ph", "ec", "wt", "lux", "temp", "humid"] as const;
+                const ia = order.indexOf(a[0] as typeof order[number]);
+                const ib = order.indexOf(b[0] as typeof order[number]);
+                return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
+              })
+              .map(([key, value]) => {
               const config = SENSOR_CONFIG[key];
               const numValue = Number(value);
 
@@ -337,9 +336,7 @@ export function FloorSensorCard({ floor }: { floor: string }) {
                       value={numValue}
                       min={config.min}
                       max={config.max}
-                      optimal={config.optimal}
                       color={config.gaugeColor}
-                      optimalColor={config.gaugeOptimalColor}
                       size={getGaugeSize()}
                     />
                   </div>
